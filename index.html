@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Help Desk | AI Support</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .chat-container { width: 450px; max-width: 95vw; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; max-height: 95vh; }
+        .header { background: #1e3a8a; color: white; padding: 20px; text-align: center; font-weight: bold; font-size: 1.2rem; flex-shrink: 0; }
+        .chat-box { flex: 1 1 auto; padding: 20px; overflow-y: auto; min-height: 0; border-bottom: 1px solid #eee; }
+        .message { margin-bottom: 15px; line-height: 1.4; padding: 10px; border-radius: 8px; font-size: 0.95rem; }
+        .user-msg { background: #dbeafe; color: #1e3a8a; align-self: flex-end; }
+        .ai-msg { background: #f3f4f6; color: #374151; }
+        .input-area { display: flex; padding: 15px; gap: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; outline: none; }
+        button { background: #1e3a8a; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #1d4ed8; }
+        .source { font-size: 0.75rem; color: #6b7280; margin-top: 5px; font-style: italic; }
+        .sources { margin-top: 8px; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+        .sources-title { font-size: 0.7rem; font-weight: bold; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .source-item { font-size: 0.72rem; color: #4b5563; margin-bottom: 3px; line-height: 1.35; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="header">Smart Help Desk 🤖</div>
+    <div class="chat-box" id="chatBox">
+        <div class="message ai-msg">Hello! I'm your AI assistant. How can I help you today?</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Ask a question...">
+        <button onclick="askQuestion()">Send</button>
+    </div>
+</div>
+
+<script>
+    // Application Load Balancer (ALB) DNS name fronting the EC2 query API.
+    // Replace with your deployed ALB DNS (e.g. http://your-alb.us-east-1.elb.amazonaws.com)
+    const API_URL = "http://YOUR_ALB_DNS.us-east-1.elb.amazonaws.com";
+
+    // Escape HTML so raw tweet text (handles, URLs, <, >, &) can't break the DOM.
+    function escapeHtml(str) {
+        return str.replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    async function askQuestion() {
+        const input = document.getElementById('userInput');
+        const chatBox = document.getElementById('chatBox');
+        const question = input.value;
+        if (!question) return;
+
+        // 1. Add user message to UI
+        chatBox.innerHTML += `<div class="message user-msg">${question}</div>`;
+        input.value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // 2. Call AWS Lambda
+            const response = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({ question: question }),
+                headers: { "Content-Type": "application/json" }
+            });
+
+            const data = await response.json();
+
+            // 3. Add AI response to UI
+            // Refusals (chit-chat guard) come back with confidence "N/A" — hide the
+            // confidence footer in that case, since no retrieval actually happened.
+            const footer = data.confidence === "N/A"
+                ? ""
+                : `<div class="source">Source confidence: ${data.confidence}</div>`;
+
+            // Option A: render the retrieved sources so the [n] citations resolve.
+            let sourcesHtml = "";
+            const allSources = data.sources || [];
+            // Show ONLY the sources actually cited in the answer (e.g. [1], [5]),
+            // in the order they appear — so the Sources list always matches the
+            // [n] markers in the answer text. Falls back to first 3 if no markers.
+            const citedIdx = [];
+            const citeRe = /\[(\d+)\]/g;
+            let citeMatch;
+            while ((citeMatch = citeRe.exec(data.answer)) !== null) {
+                const idx = parseInt(citeMatch[1], 10) - 1;
+                if (idx >= 0 && idx < allSources.length && !citedIdx.includes(idx)) {
+                    citedIdx.push(idx);
+                }
+            }
+            const shownSources = citedIdx.length > 0 ? citedIdx.map(i => allSources[i]) : allSources.slice(0, 3);
+            if (shownSources.length > 0) {
+                // Label each source with its ACTUAL citation number (e.g. [2]) so it
+                // matches the [n] marker in the answer — not its position in this list.
+                sourcesHtml = `<div class="sources"><div class="sources-title">Sources</div>` +
+                    shownSources.map((s, i) => {
+                        const label = citedIdx.length > 0 ? (citedIdx[i] + 1) : (i + 1);
+                        return `<div class="source-item">[${label}] ${escapeHtml(s)}</div>`;
+                    }).join("") + `</div>`;
+            }
+
+            chatBox.innerHTML += `<div class="message ai-msg">${data.answer.trim()}${sourcesHtml}${footer}</div>`;
+        } catch (error) {
+            chatBox.innerHTML += `<div class="message ai-msg" style="color: red;">Error: Could not reach the AI. Make sure you set the API_URL (ALB DNS) correctly.</div>`;
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+
+</body>
+</html>
