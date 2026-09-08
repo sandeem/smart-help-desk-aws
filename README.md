@@ -41,7 +41,6 @@ EC2 instance — FastAPI (uvicorn) on port 8000
 psql "$DATABASE_URL" -f schema.sql
 
 # 2. Ingest the sample data
-python prepare_data.py          # builds faq_data.csv from the Kaggle source
 python ingest.py                # chunks, embeds, and stores in pgvector
 
 # 3. Set DB env vars, then start the server
@@ -98,8 +97,7 @@ The generator (Nova Micro) is instructed to answer **only** from the provided co
 |------|---------|
 | `query.py` | FastAPI backend — the RAG query engine |
 | `ingest.py` | Lambda ingestion pipeline (S3 trigger → chunk → embed → store) |
-| `prepare_data.py` | Builds `faq_data.csv` from the raw Kaggle source |
-| `prepare_data_paired.py` | Builds the paired question+answer corpus |
+| `prepare_data_paired.py` | Builds the paired question+answer corpus (`faq_data_paired.csv`) from the raw Kaggle source |
 | `schema.sql` | Postgres/pgvector table + index definitions |
 | `setup_ec2.sh` | EC2 bootstrap + server startup |
 | `test_guard.py` | Offline tests for the chit-chat guard |
@@ -112,7 +110,7 @@ The generator (Nova Micro) is instructed to answer **only** from the provided co
 
 This project uses the public **"Customer Support on Twitter"** dataset (originally from DeepMind, hosted on Kaggle). It contains millions of anonymized customer-support tweets from major brands.
 
-**Note on the raw data:** the full `twcs.csv` is **~493MB** — far too large to commit to GitHub (the hard limit is 100MB per file). To work with the full dataset, download it directly from [Kaggle](https://www.kaggle.com/datasets/thoughtvector/customer-support-on-twitter) and run `prepare_data.py` / `prepare_data_paired.py` against it.
+**Note on the raw data:** the full `twcs.csv` is **~493MB** — far too large to commit to GitHub (the hard limit is 100MB per file). To work with the full dataset, download it directly from [Kaggle](https://www.kaggle.com/datasets/thoughtvector/customer-support-on-twitter) and run `prepare_data_paired.py` against it.
 
 The repo ships with `faq_data.csv`, a **processed 200-row sample** (and `faq_data_paired.csv` is produced by `prepare_data_paired.py`), which is enough to run the system locally and demonstrate retrieval.
 
