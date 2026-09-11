@@ -24,7 +24,9 @@ EC2 instance — FastAPI (uvicorn) on port 8000
 
 - **Frontend** — a self-contained `index.html` served from Vercel, which reverse-proxies `/api/` to the HTTP ALB (resolves browser mixed-content blocking).
 - **Backend** — a FastAPI app (`query.py`) running on EC2. It turns the question into a vector, searches the DB, and asks Nova Micro to answer **only from the retrieved context**, with numbered citations.
-- **Data pipeline** — `prepare_data*.py` reads the raw Kaggle CSV, `ingest.py` (Lambda) chunks + embeds + stores the corpus, `schema.sql` defines the pgvector tables.
+- **Data pipeline** — `prepare_data_paired.py` reads the raw Kaggle CSV, `ingest.py` (Lambda) chunks + embeds + stores the corpus, `schema.sql` defines the pgvector tables.
+
+> 📐 **Full infrastructure diagrams:** [`ARCHITECTURE.md`](ARCHITECTURE.md) (renders inline on GitHub) or [`ARCHITECTURE.html`](ARCHITECTURE.html) (styled dark-theme version — download and open in a browser). Both cover the VPC layout, public/private subnet placement, security-group chain, and both data flows.
 
 ---
 
