@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Help Desk — AWS Architecture</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.1rem;
+      margin-bottom: 10px;
+      color: #f0abfc;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+    .stack {
+      text-align: center;
+      color: #64748b;
+      margin-bottom: 44px;
+      font-size: 0.82rem;
+      font-family: 'Consolas', monospace;
+    }
+    .panel {
+      max-width: 1150px;
+      margin: 0 auto 56px auto;
+      background: #1e2130;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      padding: 32px;
+    }
+    .panel-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .panel-desc {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin-bottom: 26px;
+    }
+    .panel.infra  .panel-title { color: #60a5fa; }
+    .panel.sec    .panel-title { color: #f87171; }
+    .panel.ingest .panel-title { color: #34d399; }
+    .panel.query  .panel-title { color: #fbbf24; }
+    .panel.cliff  .panel-title { color: #f472b6; }
+    .panel.seq    .panel-title { color: #a78bfa; }
+    .panel.info   .panel-title { color: #22d3ee; }
+    .mermaid {
+      background: #0f1117;
+      border-radius: 10px;
+      padding: 24px;
+      overflow-x: auto;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 22px;
+      font-size: 0.87rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #334155;
+      vertical-align: top;
+    }
+    th {
+      color: #cbd5e1;
+      font-weight: 600;
+      background: #0f1117;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+    }
+    td code, p code, li code {
+      background: #0f1117;
+      color: #7dd3fc;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      font-family: 'Consolas', monospace;
+    }
+    .callout {
+      margin-top: 22px;
+      background: #0f1117;
+      border-left: 3px solid #fbbf24;
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: #cbd5e1;
+    }
+    .callout.key { border-left-color: #34d399; }
+    .callout strong { color: #f1f5f9; }
+    .pub  { color: #34d399; font-weight: 600; }
+    .priv { color: #f87171; font-weight: 600; }
+    ul { margin: 16px 0 0 22px; font-size: 0.88rem; color: #cbd5e1; }
+    li { margin-bottom: 7px; }
+    .metric-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 22px;
+    }
+    .metric {
+      flex: 1 1 150px;
+      background: #0f1117;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .metric .val {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #34d399;
+      font-family: 'Consolas', monospace;
+    }
+    .metric .lbl {
+      display: block;
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.8rem;
+      margin-top: 30px;
+      padding-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🏗️ Smart Help Desk — AWS Architecture</h1>
+<p class="subtitle">A production-style RAG customer-support chatbot, built entirely on AWS</p>
+<p class="stack">FastAPI · Amazon Bedrock (Titan V2 + Nova Micro) · PostgreSQL/pgvector · RDS · EC2 · Lambda · ALB · S3 · Vercel</p>
+
+<!-- ─────────────────────────────────────────────── 1. INFRASTRUCTURE -->
+<div class="panel infra">
+  <div class="panel-title">1 · Infrastructure Overview — VPC &amp; Subnet Placement</div>
+  <div class="panel-desc">
+    The defining property of this design: nothing holding data or running application logic is reachable
+    from the internet. Only the load balancer sits in a <span class="pub">public subnet</span>.
+  </div>
+  <div class="mermaid">
+flowchart TB
+    subgraph internet["🌐 Internet"]
+        user["👤 User Browser"]
+        vercel["▲ Vercel<br/>Static UI + HTTPS<br/>rewrite proxy /api/*"]
+    end
+
+    subgraph aws["☁️ AWS — Region us-east-1"]
+        subgraph managed["AWS Managed Services — outside the VPC"]
+            bedrock["🧠 Amazon Bedrock<br/>Titan V2 · Nova Micro"]
+            s3["🪣 Amazon S3<br/>CSV · code bundle · reports"]
+        end
+
+        subgraph vpc["🔒 VPC — enterprise-vpc · 2 Availability Zones"]
+            igw["🚪 Internet Gateway"]
+
+            subgraph pub["🟩 PUBLIC SUBNETS — AZ-a + AZ-b"]
+                alb["⚖️ Application Load Balancer<br/>listener :80<br/>alb-sg"]
+            end
+
+            subgraph priv["🟥 PRIVATE SUBNETS — AZ-a + AZ-b · no internet route"]
+                ec2["🖥️ EC2 t3.micro<br/>FastAPI / uvicorn :8000<br/>ec2-sg"]
+                lam["λ Lambda<br/>ingest.py · VPC-attached"]
+                rds[("🗄️ RDS PostgreSQL<br/>db.t4g.micro + pgvector<br/>rds-sg")]
+                vpce["🔌 VPC Endpoints<br/>Bedrock · SSM Interface<br/>S3 Gateway"]
+            end
+        end
+    end
+
+    user -->|HTTPS| vercel
+    vercel -->|"HTTP /api/*"| igw
+    igw --> alb
+    alb -->|":8000 — only alb-sg"| ec2
+    ec2 -->|":5432 — only ec2-sg"| rds
+    lam -->|":5432"| rds
+
+    ec2 -.->|private tunnel| vpce
+    lam -.->|private tunnel| vpce
+    vpce -.-> bedrock
+    vpce -.-> s3
+    s3 ==>|"S3 event trigger"| lam
+
+    classDef pubStyle fill:#065f46,stroke:#34d399,stroke-width:2px,color:#d1fae5
+    classDef privStyle fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fee2e2
+    classDef mgdStyle fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#e0e7ff
+    classDef netStyle fill:#78350f,stroke:#fbbf24,stroke-width:2px,color:#fef3c7
+    class alb pubStyle
+    class ec2,lam,rds privStyle
+    class bedrock,s3 mgdStyle
+    class igw,vpce netStyle
+  </div>
+
+  <table>
+    <tr><th>Component</th><th>Subnet</th><th>Why there</th></tr>
+    <tr><td><strong>Application Load Balancer</strong></td><td><span class="pub">🟩 Public</span></td><td>Must accept internet traffic. Requires 2 AZs by design</td></tr>
+    <tr><td><strong>EC2 — FastAPI API</strong></td><td><span class="priv">🟥 Private</span></td><td>No public IP. Reachable <em>only</em> via the ALB; admin access via SSM, not SSH</td></tr>
+    <tr><td><strong>Lambda — ingestion</strong></td><td><span class="priv">🟥 Private</span></td><td>Must reach RDS, which is private. VPC-attached</td></tr>
+    <tr><td><strong>RDS PostgreSQL</strong></td><td><span class="priv">🟥 Private</span></td><td>Holds all data. <code>Publicly accessible = false</code>. Zero internet exposure</td></tr>
+    <tr><td><strong>VPC Endpoints</strong></td><td><span class="priv">🟥 Private</span></td><td>Route to Bedrock/S3/SSM <strong>without</strong> a NAT Gateway</td></tr>
+  </table>
+
+  <div class="callout">
+    💡 <strong>Cost decision:</strong> the VPC was created with <strong>NAT Gateways: NONE</strong> (~$32/month saved).
+    VPC Endpoints provide the private path to AWS services instead — traffic never leaves the AWS backbone,
+    which is both cheaper <em>and</em> more secure.
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────── 2. SECURITY -->
+<div class="panel sec">
+  <div class="panel-title">2 · Security Group Chain — Defense in Depth</div>
+  <div class="panel-desc">
+    Each tier trusts only the tier directly in front of it. Rules reference <strong>security group IDs</strong>,
+    not IP addresses — so the chain survives instance replacement and is auto-scaling ready.
+  </div>
+  <div class="mermaid">
+flowchart LR
+    net["🌐 0.0.0.0/0<br/>Anywhere"]
+    albsg["alb-sg<br/>─────────<br/>IN :80 HTTP<br/>FROM 0.0.0.0/0"]
+    ec2sg["ec2-sg<br/>─────────<br/>IN :8000 TCP<br/>FROM alb-sg ✅"]
+    rdssg["rds-sg<br/>─────────<br/>IN :5432 Postgres<br/>FROM ec2-sg ✅"]
+
+    net ==>|allowed| albsg
+    albsg ==>|allowed| ec2sg
+    ec2sg ==>|allowed| rdssg
+
+    net -.->|"❌ BLOCKED"| ec2sg
+    net -.->|"❌ BLOCKED"| rdssg
+    albsg -.->|"❌ BLOCKED"| rdssg
+
+    classDef pubT fill:#065f46,stroke:#34d399,stroke-width:2px,color:#d1fae5
+    classDef appT fill:#78350f,stroke:#fbbf24,stroke-width:2px,color:#fef3c7
+    classDef dbT fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fee2e2
+    classDef netT fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#e2e8f0
+    class net netT
+    class albsg pubT
+    class ec2sg appT
+    class rdssg dbT
+  </div>
+  <div class="callout key">
+    <strong>What this buys:</strong> the database cannot be reached from the internet — and cannot even be
+    reached from the load balancer, only from the application tier. That's the Principle of Least Privilege
+    applied at the network layer.
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────── 3. INGESTION -->
+<div class="panel ingest">
+  <div class="panel-title">3 · Flow A — Ingestion Pipeline (offline, event-driven)</div>
+  <div class="panel-desc">Runs when the corpus changes. Builds the searchable knowledge base.</div>
+  <div class="mermaid">
+flowchart LR
+    csv["📄 faq_data_paired.csv<br/>200 question-answer pairs"]
+    s3["🪣 S3 Bucket"]
+    lam["λ Lambda<br/>ingest.py"]
+    chunk["✂️ chunk_text<br/>600 chars · 150 overlap"]
+    titan["🧠 Bedrock Titan V2<br/>→ 1024-dim vector"]
+    db[("🗄️ RDS + pgvector<br/>support_articles<br/>embeddings")]
+
+    csv -->|upload| s3
+    s3 -->|"⚡ S3 event trigger"| lam
+    lam --> chunk
+    chunk -->|per chunk| titan
+    titan -->|"text + vector"| db
+
+    classDef step fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#e0e7ff
+    classDef store fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fee2e2
+    class lam,chunk,titan step
+    class db,s3 store
+  </div>
+  <div class="callout">
+    <strong>Why serverless here:</strong> ingestion is bursty — it runs when data changes, then stops.
+    Lambda costs nothing between runs.
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────── 4. QUERY -->
+<div class="panel query">
+  <div class="panel-title">4 · Flow B — Live Query Pipeline (with guardrails)</div>
+  <div class="panel-desc">
+    Every question passes through five layers. Three of them can refuse <em>before</em> any model
+    or database call is made.
+  </div>
+  <div class="mermaid">
+flowchart TD
+    q["❓ User question"]
+    cors["1️⃣ CORS middleware<br/>allow cross-origin from Vercel"]
+    guard{"2️⃣ Chit-chat guard<br/>regex · zero cost<br/>no DB, no LLM"}
+    embed["🧠 Bedrock Titan V2<br/>embed question"]
+    search["4️⃣ pgvector search<br/>cosine distance<br/>Top-K 10 · chunk 600"]
+    gate{"3️⃣ Relevance gate<br/>closest distance<br/>above 0.78 ?"}
+    nova["5️⃣ Bedrock Nova Micro<br/>grounded prompt<br/>temperature 0 · cite max 3"]
+    strip{"Model declined?"}
+    ok["✅ answer + sources<br/>confidence High"]
+    refuse["🚫 refusal<br/>confidence N/A<br/>citations stripped"]
+
+    q --> cors --> guard
+    guard -->|"small talk — hi, thanks"| refuse
+    guard -->|"real question"| embed
+    embed --> search --> gate
+    gate -->|"too far — weather 0.89"| refuse
+    gate -->|"in scope — Photoshop 0.68"| nova
+    nova --> strip
+    strip -->|yes| refuse
+    strip -->|no| ok
+
+    classDef guardStyle fill:#78350f,stroke:#fbbf24,stroke-width:2px,color:#fef3c7
+    classDef aiStyle fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#e0e7ff
+    classDef okStyle fill:#065f46,stroke:#34d399,stroke-width:2px,color:#d1fae5
+    classDef noStyle fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fee2e2
+    class guard,gate,strip guardStyle
+    class embed,nova,search aiStyle
+    class ok okStyle
+    class refuse noStyle
+  </div>
+
+  <table>
+    <tr><th>Layer</th><th>Mechanism</th><th>Cost to refuse</th><th>Catches</th></tr>
+    <tr><td><strong>Chit-chat guard</strong></td><td>Regex + keyword tiers</td><td><strong>$0</strong> — no DB, no LLM</td><td><code>"hi"</code>, <code>"thanks"</code>, <code>"are you a bot?"</code></td></tr>
+    <tr><td><strong>Relevance gate</strong></td><td>Cosine distance above 0.78</td><td>1 embed + 1 query, <strong>no LLM</strong></td><td><code>"What's the weather in Paris?"</code></td></tr>
+    <tr><td><strong>Citation strip</strong></td><td>Server-side regex on response</td><td>Full pipeline</td><td>Model declining despite retrieval</td></tr>
+  </table>
+
+  <div class="callout key">
+    🔑 <strong>The design principle:</strong> the relevance gate is <strong>arithmetic, not a prompt instruction</strong>.
+    A prompt is a <em>request</em> the model may ignore; a distance threshold means the model
+    <strong>never executes</strong> — so it <em>cannot</em> hallucinate a citation for an unrelated question.
+    Safety is enforced in code, not trusted to the model.
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────── 5. SAFETY CLIFF -->
+<div class="panel cliff">
+  <div class="panel-title">5 · The Top-K Safety Cliff</div>
+  <div class="panel-desc">
+    The finding that drove the production configuration: retrieving <strong>more</strong> context made the
+    system <strong>less</strong> safe.
+  </div>
+  <div class="mermaid">
+xychart-beta
+    title "Adversarial Block Rate vs Top-K"
+    x-axis "Top-K chunks retrieved" [5, 10, 15, 20, 30]
+    y-axis "Block rate percent" 0 --> 100
+    line [100, 100, 50, 50, 50]
+  </div>
+
+  <table>
+    <tr><th>Top-K</th><th>Adversarial block rate</th><th>Interpretation</th></tr>
+    <tr><td>5</td><td>100% ✅</td><td>Safe, but thinner context</td></tr>
+    <tr><td><strong>10</strong></td><td><strong>100% ✅</strong></td><td><strong>Production config — safe and complete</strong></td></tr>
+    <tr><td>15</td><td>50% ❌</td><td>Cliff edge — noise rationalised into answers</td></tr>
+    <tr><td>20–30</td><td>50% ❌</td><td>No recovery</td></tr>
+  </table>
+
+  <div class="callout">
+    Past K=10 the extra chunks are mostly noise, but enough loosely-related text reaches the prompt that
+    the model convinces itself it has grounds to answer. Production is locked at
+    <strong>chunk 600, Top-K 10</strong> — which also cut p50 latency ~40% (1.00s → 0.60s).
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────── 6. SEQUENCE -->
+<div class="panel seq">
+  <div class="panel-title">6 · Request Sequence — End to End</div>
+  <div class="panel-desc">A single question, traced across every service it touches.</div>
+  <div class="mermaid">
+sequenceDiagram
+    participant U as 👤 Browser
+    participant V as ▲ Vercel
+    participant A as ⚖️ ALB
+    participant E as 🖥️ EC2 FastAPI
+    participant B as 🧠 Bedrock
+    participant D as 🗄️ RDS pgvector
+
+    U->>V: POST /api/ with question
+    Note over V: HTTPS to HTTP rewrite proxy<br/>avoids mixed-content block
+    V->>A: POST / on HTTP :80
+    A->>E: forward to :8000
+    Note over E: chit-chat guard — regex, $0
+    E->>B: embed question — Titan V2
+    B-->>E: 1024-dim vector
+    E->>D: ORDER BY cosine distance, LIMIT 10
+    D-->>E: 10 chunks + distances
+    Note over E: relevance gate — distance above 0.78 ?
+    E->>B: grounded prompt + context — Nova Micro
+    B-->>E: cited answer
+    Note over E: strip citations if declined
+    E-->>A: answer, confidence, sources
+    A-->>V: JSON
+    V-->>U: rendered answer + Sources
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────── 7. INVENTORY -->
+<div class="panel info">
+  <div class="panel-title">7 · Service Inventory &amp; Results</div>
+  <div class="panel-desc">Every resource, its configuration, and what it does.</div>
+
+  <div class="metric-row">
+    <div class="metric"><span class="val">100%</span><span class="lbl">Block rate @ K=10</span></div>
+    <div class="metric"><span class="val">0.60s</span><span class="lbl">p50 latency</span></div>
+    <div class="metric"><span class="val">12.0/15</span><span class="lbl">Judge groundedness</span></div>
+    <div class="metric"><span class="val">10</span><span class="lbl">Configs benchmarked</span></div>
+    <div class="metric"><span class="val">&lt;$5</span><span class="lbl">Total AWS cost</span></div>
+  </div>
+
+  <table>
+    <tr><th>Service</th><th>Configuration</th><th>Role</th></tr>
+    <tr><td><strong>VPC</strong></td><td>2 AZs · 2 public + 2 private subnets · no NAT Gateway</td><td>Network isolation</td></tr>
+    <tr><td><strong>ALB</strong></td><td>Public subnets · :80 → :8000 · health check accepts 200 + 405</td><td>Public entry, health checks</td></tr>
+    <tr><td><strong>EC2</strong></td><td><code>t3.micro</code> · private subnet · IAM: SSM + Bedrock</td><td>FastAPI query API</td></tr>
+    <tr><td><strong>Lambda</strong></td><td>Private subnet · S3 event trigger · IAM: S3 + Bedrock</td><td>Ingestion pipeline</td></tr>
+    <tr><td><strong>RDS</strong></td><td><code>db.t4g.micro</code> · PostgreSQL + pgvector · Single-AZ · not public</td><td>Text + 1024-dim vectors</td></tr>
+    <tr><td><strong>S3</strong></td><td>Bucket for CSV, code bundle, reports</td><td>Storage + event source</td></tr>
+    <tr><td><strong>Bedrock</strong></td><td>Titan Embeddings V2 · Nova Micro · Nova Lite</td><td>Embed · generate · evaluate</td></tr>
+    <tr><td><strong>VPC Endpoints</strong></td><td>Bedrock + SSM (Interface) · S3 (Gateway)</td><td>Private AWS access, no NAT</td></tr>
+    <tr><td><strong>SSM Session Manager</strong></td><td>Via Interface Endpoint</td><td>Admin shell — no SSH keys, no public IP</td></tr>
+    <tr><td><strong>IAM Roles</strong></td><td><code>AmazonSSMManagedInstanceCore</code>, <code>AmazonBedrockFullAccess</code>, S3 read</td><td>Least privilege, no static creds</td></tr>
+    <tr><td><strong>Vercel</strong></td><td>Static hosting + <code>/api/*</code> rewrite to ALB</td><td>Frontend + HTTPS termination</td></tr>
+  </table>
+
+  <div class="panel-desc" style="margin-top:30px;margin-bottom:10px;font-weight:600;color:#cbd5e1;">
+    Design decisions &amp; trade-offs
+  </div>
+  <table>
+    <tr><th>Decision</th><th>Alternative considered</th><th>Why this choice</th></tr>
+    <tr><td><strong>pgvector inside RDS</strong></td><td>Pinecone / OpenSearch</td><td>One Free-Tier database stores text <em>and</em> vectors — no extra service, cost, or system to secure</td></tr>
+    <tr><td><strong>EC2 for the API</strong></td><td>Lambda + API Gateway</td><td>Avoids cold starts and VPC ENI attach latency on every live query</td></tr>
+    <tr><td><strong>Lambda for ingestion</strong></td><td>Always-on worker</td><td>Bursty, event-driven workload; costs nothing between runs</td></tr>
+    <tr><td><strong>VPC Endpoints</strong></td><td>NAT Gateway</td><td>Saves ~$32/month and keeps traffic on the AWS backbone</td></tr>
+    <tr><td><strong>ALB for one instance</strong></td><td>Public IP on EC2</td><td>Keeps EC2 private, adds health checks, scalable from day one</td></tr>
+    <tr><td><strong>Vercel rewrite proxy</strong></td><td>ACM cert + custom domain</td><td>No domain purchase; solves HTTPS→HTTP mixed content immediately</td></tr>
+    <tr><td><strong>Nova Micro</strong></td><td>Larger frontier model</td><td>Right-sized: sub-second latency, minimal cost for short-snippet summarisation</td></tr>
+    <tr><td><strong>Two-table schema</strong></td><td>Single table</td><td>Keeping large text out of the vector table means the similarity scan reads less per row</td></tr>
+  </table>
+
+  <div class="panel-desc" style="margin-top:30px;margin-bottom:0;font-weight:600;color:#cbd5e1;">
+    Known limitations — deliberate scope boundaries
+  </div>
+  <ul>
+    <li><strong>Stateless</strong> — no conversation memory; each question is independent</li>
+    <li><strong>Semantic search only</strong> — no BM25/hybrid layer, so exact identifiers (SKUs, error codes) are a weak spot</li>
+    <li><strong>Console-provisioned</strong> — not yet Infrastructure as Code (Terraform/CDK is the next step)</li>
+    <li><strong>Single-AZ RDS</strong> — Free Tier constraint; production would be Multi-AZ</li>
+    <li><strong>Threshold hand-calibrated</strong> — 0.78 was tuned on a small sample and would need re-tuning on a larger corpus</li>
+  </ul>
+</div>
+
+<footer>
+  Diagrams rendered with Mermaid · Resource names are illustrative — no live endpoints or credentials appear in this repository.
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#0f1117',
+      primaryColor: '#1e2130',
+      primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#475569',
+      lineColor: '#64748b',
+      secondaryColor: '#312e81',
+      tertiaryColor: '#1e293b',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', padding: 18, useMaxWidth: true },
+    sequence: { useMaxWidth: true, wrap: true }
+  });
+</script>
+
+</body>
+</html>

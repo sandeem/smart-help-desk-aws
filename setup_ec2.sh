@@ -37,8 +37,8 @@ mkdir -p /home/ec2-user/app
 # Step 6: Set your database environment variables
 # Replace the values below with your actual RDS endpoint and password.
 # In production, you would use AWS Secrets Manager instead.
-export DB_HOST="YOUR_RDS_ENDPOINT_HERE"    # e.g. helpdesk-db.cq3kwo6sigw5.us-east-1.rds.amazonaws.com
-export DB_PASS="password1234"
+export DB_HOST="YOUR_RDS_ENDPOINT_HERE"    # e.g. my-db.abc123xyz.us-east-1.rds.amazonaws.com
+export DB_PASS="YOUR_DB_PASSWORD_HERE"     # never commit a real password
 
 # Step 7: START THE WEB SERVER
 # uvicorn = the server runner
