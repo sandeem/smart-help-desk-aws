@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Help Desk — Flowcharts</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 40px 20px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #f0abfc;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 48px;
+      font-size: 0.95rem;
+    }
+    .pipeline {
+      max-width: 1100px;
+      margin: 0 auto 60px auto;
+      background: #1e2130;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      padding: 32px;
+    }
+    .pipeline-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .pipeline-desc {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+    .pipeline.push .pipeline-title { color: #60a5fa; }
+    .pipeline.pull .pipeline-title { color: #34d399; }
+    .pipeline.net .pipeline-title { color: #fbbf24; }
+    .pipeline.tune .pipeline-title { color: #f472b6; }
+    .mermaid {
+      background: #0f1117;
+      border-radius: 10px;
+      padding: 24px;
+      overflow-x: auto;
+    }
+    .flash-cards {
+      max-width: 1100px;
+      margin: 0 auto 60px auto;
+      background: #1e2130;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      padding: 32px;
+    }
+    .flash-cards h2 {
+      color: #f0abfc;
+      font-size: 1.4rem;
+      margin-bottom: 24px;
+    }
+    .sequence {
+      background: #0f1117;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      font-family: monospace;
+      font-size: 1rem;
+      line-height: 2;
+      color: #e2e8f0;
+    }
+    .sequence h3 { color: #60a5fa; margin-bottom: 8px; font-family: 'Segoe UI', sans-serif; font-size: 1rem; }
+    .sequence.pull h3 { color: #34d399; }
+    .arrow { color: #f0abfc; font-weight: bold; }
+    .node { color: #fbbf24; }
+    .branch { color: #34d399; }
+    .numbers {
+      max-width: 1100px;
+      margin: 0 auto 60px auto;
+      background: #1e2130;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      padding: 32px;
+    }
+    .numbers h2 { color: #f0abfc; font-size: 1.4rem; margin-bottom: 24px; }
+    .num-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .num-card {
+      background: #0f1117;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      border: 1px solid #334155;
+    }
+    .num-card .big { font-size: 2.5rem; font-weight: 800; color: #f0abfc; }
+    .num-card .label { color: #94a3b8; font-size: 0.85rem; margin-top: 6px; }
+    .zoom-tip {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.82rem;
+      margin-bottom: 32px;
+    }
+
+    /* Center the rendered diagram inside its card */
+    .mermaid { text-align: center; }
+
+    /* ---------- PRINT / PDF LAYOUT ---------- */
+    @media print {
+      @page { size: letter portrait; margin: 0.4in; }
+
+      html, body { background: #0f1117 !important; }
+      body {
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      h1 { font-size: 1.5rem; margin-bottom: 6px; }
+      .subtitle { margin-bottom: 18px; font-size: 0.85rem; }
+      .zoom-tip { display: none; }
+
+      /* One section per page so a title is never orphaned from its diagram */
+      .pipeline.pull, .pipeline.tune, .pipeline.net, .flash-cards {
+        break-before: page;
+        page-break-before: always;
+      }
+
+      .pipeline, .flash-cards, .numbers {
+        max-width: none;
+        margin: 0 0 16px 0;
+        padding: 22px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .mermaid { padding: 14px; }
+
+      /* Cap diagram height so title + description + diagram share one page */
+      .mermaid svg { max-height: 660px !important; }
+
+      .sequence, .num-card { break-inside: avoid; page-break-inside: avoid; }
+      .sequence { font-size: 0.9rem; line-height: 1.85; padding: 16px 18px; }
+      .num-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .num-card { padding: 16px; }
+      .num-card .big { font-size: 2.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>☁️ Smart Help Desk — RAG Optimizer</h1>
+  <p class="subtitle">End-to-End Flowcharts — Hybrid Architecture (Lambda Ingestion + EC2/ALB Query) · Tuning Lab · Solutions Architect Prep</p>
+  <p class="zoom-tip">💡 Tip: Use <strong>Ctrl + scroll</strong> or browser zoom (Ctrl +/-) to resize diagrams</p>
+
+  <!-- PIPELINE A -->
+  <div class="pipeline push">
+    <div class="pipeline-title">🔵 Pipeline A — Ingestion (The Indexer)</div>
+    <div class="pipeline-desc">You drop an FAQ file into S3. That event automatically triggers the <code>ingest-fn</code> Lambda (private subnets, <code>ec2-sg</code>) to read the file through the free S3 Gateway Endpoint, chunk the text, embed it with Bedrock via the Interface Endpoint, and store it in RDS pgvector.</div>
+    <div class="mermaid">
+flowchart TD
+    A([📄 Upload FAQ text file\nto S3 bucket]) --> B{{⚡ S3 Event Notification\nObjectCreated}}
+    B --> C[⚙️ ingest-fn Lambda\nVPC private subnets · ec2-sg]
+    C --> D[✂️ chunk text\nsize is tunable\n200 / 600 / 1000 chars\n150-char overlap]
+    D --> E[🔢 embed each chunk\nBedrock Titan V2 · 1024-dim\nvia Interface Endpoint]
+    E --> F[(🗄️ RDS PostgreSQL + pgvector\nsupport_articles + embeddings\nprivate subnets · rds-sg)]
+    C --> G[🏷️ tag rows with chunk_size\nin metadata JSONB\nfor A/B experiments]
+    G --> F
+
+    style A fill:#1e40af,color:#fff,stroke:#3b82f6
+    style B fill:#78350f,color:#fff,stroke:#f59e0b
+    style C fill:#1e3a5f,color:#fff,stroke:#3b82f6
+    style F fill:#064e3b,color:#fff,stroke:#10b981
+    style D fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style G fill:#1e293b,color:#e2e8f0,stroke:#475569
+    </div>
+  </div>
+
+  <!-- PIPELINE B -->
+  <div class="pipeline pull">
+    <div class="pipeline-title">🟢 Pipeline B — Query (EC2 + ALB Answer Engine)</div>
+    <div class="pipeline-desc">A user's question comes in through the Internet Gateway to the Application Load Balancer (public subnets), which forwards it to the EC2 API server (private subnets). EC2 embeds the question via the Bedrock Interface Endpoint, searches pgvector, then asks Nova Micro for a cited answer.</div>
+    <div class="mermaid">
+flowchart TD
+    L([🔍 User asks\n'How do I reset my Photoshop preferences?']) --> ALB[⚖️ Application Load Balancer\npublic subnets · alb-sg · port 80]
+    ALB --> EC2[🖥️ EC2 API server\nFastAPI · private subnets\nec2-sg · port 8000]
+    EC2 --> O[🔢 embed question\nBedrock Titan V2\nvia Interface Endpoint]
+    O --> P[📐 pgvector similarity search\ncosine distance · top-k 10\nRDS private subnets · rds-sg]
+    P --> Q[✍️ Bedrock Nova Micro\ncited answer from context only]
+    Q --> R([🖥️ Return answer])
+
+    style L fill:#064e3b,color:#fff,stroke:#10b981
+    style ALB fill:#78350f,color:#fff,stroke:#f59e0b
+    style EC2 fill:#1e3a5f,color:#fff,stroke:#3b82f6
+    style Q fill:#1e3a5f,color:#fff,stroke:#3b82f6
+    style R fill:#064e3b,color:#fff,stroke:#10b981
+    style O fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style P fill:#1e293b,color:#e2e8f0,stroke:#475569
+    </div>
+  </div>
+
+  <!-- TUNING LAB -->
+  <div class="pipeline tune">
+    <div class="pipeline-title">🩷 The Tuning Lab (What makes this "Proper")</div>
+    <div class="pipeline-desc">The differentiator. You run the SAME questions through different configurations, measure the results, and pick the best settings — giving you real metrics for your resume.</div>
+    <div class="mermaid">
+flowchart TD
+    T([🧪 Same test questions]) --> E1[Experiment A\nchunk 200 · k=5\ncheap/fast]
+    T --> E2[Experiment B\nchunk 600 · k=10\nwinner: 12.0/15 judge score]
+    T --> E3[Experiment C\nchunk 1000 · k=15+\nover-retrieval breaks guardrail]
+    E1 --> M1[📊 Measure:\naccuracy + cost + latency]
+    E2 --> M1
+    E3 --> M1
+    M1 --> W([🏆 Pick winning config\n'Tuning Story' for interview])
+
+    style T fill:#831843,color:#fff,stroke:#f472b6
+    style E1 fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style E2 fill:#064e3b,color:#fff,stroke:#10b981
+    style E3 fill:#7f1d1d,color:#fff,stroke:#ef4444
+    style M1 fill:#1e3a5f,color:#fff,stroke:#3b82f6
+    style W fill:#831843,color:#fff,stroke:#f472b6
+    </div>
+  </div>
+
+  <!-- NETWORK / INFRA VIEW -->
+  <div class="pipeline net">
+    <div class="pipeline-title">🟡 Infrastructure View — Hybrid VPC (Lambda + EC2/ALB)</div>
+    <div class="pipeline-desc">The full picture. Ingestion is serverless (S3 → Lambda). The query API is enterprise (Internet Gateway → ALB in public subnets → EC2 in private subnets). NO NAT Gateway: private compute reaches S3 over a <strong>free S3 Gateway Endpoint</strong> and reaches Bedrock over a <strong>Bedrock Interface Endpoint (PrivateLink)</strong>. Three-tier security group chain: <code>alb-sg</code> (80 from the world) → <code>ec2-sg</code> (8000 from alb-sg) → <code>rds-sg</code> (5432 from ec2-sg). The Lambda reuses <code>ec2-sg</code>, so it inherits the same chain.</div>
+    <div class="mermaid">
+flowchart TD
+    USER([👤 User asks question])
+    UP([📄 FAQ upload])
+    S3[(🪣 S3 Bucket\nenterprise-faq-data-sm)]
+    BR[🤖 Amazon Bedrock\nTitan V2 + Nova Micro]
+    subgraph VPC[enterprise-vpc · 2 AZs · NO NAT Gateway]
+      subgraph PUBSUB[Public subnets · 2 AZs]
+        IGW[🚪 Internet Gateway]
+        ALB[⚖️ Application Load Balancer\nalb-sg · port 80 from 0.0.0.0/0]
+      end
+      subgraph PRIVSUB[Private subnets · 2 AZs]
+        EC2[🖥️ EC2 API server\nFastAPI · ec2-sg · port 8000]
+        LAM[⚙️ ingest-fn Lambda\nec2-sg · same SG chain]
+        RDS[(🗄️ RDS pgvector\nrds-sg · port 5432\nno public access)]
+      end
+      GWEP[🪣 S3 Gateway Endpoint\nFREE · on private route tables]
+      IFEP[🔒 Bedrock Interface Endpoint\nPrivateLink · private DNS]
+    end
+    USER --> IGW
+    IGW --> ALB
+    UP --> S3
+    ALB -- port 8000 from alb-sg --> EC2
+    S3 -. event trigger .-> LAM
+    EC2 -- port 5432 from ec2-sg --> RDS
+    LAM -- port 5432 from ec2-sg --> RDS
+    LAM --> GWEP
+    GWEP -. private AWS backbone .-> S3
+    EC2 --> IFEP
+    LAM --> IFEP
+    IFEP -. private AWS backbone .-> BR
+
+    style USER fill:#064e3b,color:#fff,stroke:#10b981
+    style UP fill:#1e40af,color:#fff,stroke:#3b82f6
+    style S3 fill:#78350f,color:#fff,stroke:#f59e0b
+    style ALB fill:#78350f,color:#fff,stroke:#f59e0b
+    style EC2 fill:#1e3a5f,color:#fff,stroke:#3b82f6
+    style LAM fill:#1e3a5f,color:#fff,stroke:#3b82f6
+    style RDS fill:#064e3b,color:#fff,stroke:#10b981
+    style BR fill:#78350f,color:#fff,stroke:#f59e0b
+    style GWEP fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style IFEP fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style IGW fill:#1e293b,color:#e2e8f0,stroke:#475569
+    </div>
+  </div>
+
+  <!-- SEQUENCE FLASH CARDS -->
+  <div class="flash-cards">
+    <h2>⚡ Sequence Flash Cards</h2>
+    <div class="sequence">
+      <h3>🔵 Ingestion — say it in order:</h3>
+      <span class="node">Upload to S3</span> <span class="arrow">→</span>
+      <span class="node">S3 Event Trigger</span> <span class="arrow">→</span>
+      <span class="node">ingest-fn Lambda (private subnets · ec2-sg)</span> <span class="arrow">→</span>
+      <span class="branch">[ read file via S3 Gateway Endpoint · free ]</span> <span class="arrow">→</span>
+      <span class="node">Chunk (600 · 150 overlap)</span> <span class="arrow">→</span>
+      <span class="node">Embed — Titan V2 via Bedrock Interface Endpoint</span> <span class="arrow">→</span>
+      <span class="branch">[ RDS pgvector (rds-sg · 5432) + metadata tag ]</span>
+    </div>
+    <div class="sequence pull">
+      <h3>🟢 Query — say it in order:</h3>
+      <span class="node">Question</span> <span class="arrow">→</span>
+      <span class="node">Internet Gateway</span> <span class="arrow">→</span>
+      <span class="node">ALB (public subnets · alb-sg · 80)</span> <span class="arrow">→</span>
+      <span class="node">EC2 API (private subnets · ec2-sg · 8000)</span> <span class="arrow">→</span>
+      <span class="node">Embed — Titan V2 via Bedrock Interface Endpoint</span> <span class="arrow">→</span>
+      <span class="branch">[ pgvector top-k 10 (rds-sg · 5432) ]</span> <span class="arrow">→</span>
+      <span class="node">Nova Micro Synthesis</span> <span class="arrow">→</span>
+      <span class="node">Cited Answer</span>
+    </div>
+    <div class="sequence">
+      <h3>🩷 Tuning Lab — say it in order:</h3>
+      <span class="node">Same questions</span> <span class="arrow">→</span>
+      <span class="branch">[ chunk 200–1000 ]</span> <span class="arrow">→</span>
+      <span class="branch">[ k=5 vs k=10 vs k=15+ ]</span> <span class="arrow">→</span>
+      <span class="node">LLM-as-a-Judge score</span> <span class="arrow">→</span>
+      <span class="node">Pick winner: chunk 600, K=10</span>
+    </div>
+  </div>
+
+  <!-- KEY NUMBERS -->
+  <div class="numbers">
+    <h2>🔢 Key Numbers to Memorize</h2>
+    <div class="num-grid">
+      <div class="num-card"><div class="big">600</div><div class="label">Winning chunk size (locked in production)</div></div>
+      <div class="num-card"><div class="big">10</div><div class="label">Winning Top-K (locked in production)</div></div>
+      <div class="num-card"><div class="big">150</div><div class="label">Char overlap between chunks</div></div>
+      <div class="num-card"><div class="big">1024</div><div class="label">Titan V2 embedding dimensions</div></div>
+      <div class="num-card"><div class="big">100% → 50%</div><div class="label">Adversarial block rate at K=10 vs K≥15</div></div>
+      <div class="num-card"><div class="big">$0</div><div class="label">NAT Gateway (avoided! saves ~$32/mo) — free S3 Gateway Endpoint instead</div></div>
+      <div class="num-card"><div class="big">3</div><div class="label">Security group chain: alb-sg → ec2-sg → rds-sg</div></div>
+      <div class="num-card"><div class="big">2</div><div class="label">Bedrock models: Titan + Nova Micro</div></div>
+      <div class="num-card"><div class="big">1</div><div class="label">Database: RDS pgvector</div></div>
+      <div class="num-card"><div class="big">$10</div><div class="label">Budget alarm (total spend ~$1-5)</div></div>
+      <div class="num-card"><div class="big">2</div><div class="label">Days to build</div></div>
+    </div>
+  </div>
+
+  <!-- WELL-ARCHITECTED -->
+  <div class="numbers">
+    <h2>🏛️ Well-Architected Pillars (one-liners)</h2>
+    <div class="num-grid">
+      <div class="num-card"><div class="label"><strong style="color:#60a5fa;">Operational Excellence</strong><br/>CloudWatch logs</div></div>
+      <div class="num-card"><div class="label"><strong style="color:#34d399;">Security</strong><br/>Private-subnet DB · least-privilege IAM · SG firewall</div></div>
+      <div class="num-card"><div class="label"><strong style="color:#fbbf24;">Reliability</strong><br/>Managed RDS · event-driven retries · idempotent writes</div></div>
+      <div class="num-card"><div class="label"><strong style="color:#f0abfc;">Performance</strong><br/>ivfflat index · tuned chunk size · tuned top-k</div></div>
+      <div class="num-card"><div class="label"><strong style="color:#ef4444;">Cost Optimization</strong><br/>Free-tier · NO NAT Gateway · top-k tuning saves tokens</div></div>
+      <div class="num-card"><div class="label"><strong style="color:#6366f1;">Sustainability</strong><br/>Serverless scales to zero — no idle compute</div></div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        primaryColor: '#1e3a5f',
+        primaryTextColor: '#e2e8f0',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#64748b',
+        secondaryColor: '#1e2130',
+        tertiaryColor: '#0f1117',
+        background: '#0f1117',
+        mainBkg: '#1e2130',
+        nodeBorder: '#475569',
+        clusterBkg: '#1e2130',
+        titleColor: '#f0abfc',
+        edgeLabelBackground: '#1e2130',
+        fontSize: '16px'
+      },
+      flowchart: {
+        htmlLabels: true,
+        curve: 'basis',
+        padding: 20,
+        nodeSpacing: 50,
+        rankSpacing: 60
+      }
+    });
+  </script>
+</body>
+</html>

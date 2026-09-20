@@ -59,7 +59,11 @@
         chatBox.scrollTop = chatBox.scrollHeight;
 
         try {
-            // 2. Call AWS Lambda
+            // 2. Call the backend API.
+            //    The request goes: browser -> ALB (public subnet, port 80)
+            //    -> EC2 FastAPI server (private subnet, port 8000).
+            //    NOTE: on Vercel this is a relative "/api/" path instead, because
+            //    Vercel proxies HTTPS -> the HTTP ALB (avoids mixed-content blocking).
             const response = await fetch(API_URL, {
                 method: "POST",
                 body: JSON.stringify({ question: question }),

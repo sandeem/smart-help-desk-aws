@@ -27,6 +27,8 @@ EC2 instance — FastAPI (uvicorn) on port 8000
 - **Data pipeline** — `prepare_data_paired.py` reads the raw Kaggle CSV, `ingest.py` (Lambda) chunks + embeds + stores the corpus, `schema.sql` defines the pgvector tables.
 
 > 📐 **Full infrastructure diagrams:** [`ARCHITECTURE.md`](ARCHITECTURE.md) (renders inline on GitHub) or [`ARCHITECTURE.html`](ARCHITECTURE.html) (styled dark-theme version — download and open in a browser). Both cover the VPC layout, public/private subnet placement, security-group chain, and both data flows.
+>
+> 🎬 **Visual walkthrough:** [`FLOWCHARTS.html`](FLOWCHARTS.html) (open in a browser — the Mermaid diagrams render client-side) or [`FLOWCHARTS.pdf`](FLOWCHARTS.pdf). Covers the ingestion and query pipelines, the tuning lab, the hybrid VPC view, the sequence flash cards, and the key numbers.
 
 ---
 
