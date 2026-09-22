@@ -29,6 +29,8 @@ EC2 instance — FastAPI (uvicorn) on port 8000
 > 📐 **Full infrastructure diagrams:** [`ARCHITECTURE.md`](ARCHITECTURE.md) (renders inline on GitHub) or [`ARCHITECTURE.html`](ARCHITECTURE.html) (styled dark-theme version — download and open in a browser). Both cover the VPC layout, public/private subnet placement, security-group chain, and both data flows.
 >
 > 🎬 **Visual walkthrough:** [`FLOWCHARTS.html`](FLOWCHARTS.html) (open in a browser — the Mermaid diagrams render client-side) or [`FLOWCHARTS.pdf`](FLOWCHARTS.pdf). Covers the ingestion and query pipelines, the tuning lab, the hybrid VPC view, the sequence flash cards, and the key numbers.
+>
+> 🎥 **3-minute video walkthrough:** [Loom](https://www.loom.com/share/83d14365045f4b3aba883490e1179c87) — the problem, the live demo (grounded answer + the Paris refusal), the Top-K finding, and a short AWS console tour. Screenshots from the same deployment are [below](#-screenshots).
 
 ---
 
@@ -87,11 +89,62 @@ Calibrated on real demo questions:
 - "Sprint direct message" → distance **0.34** (in-scope → answer)
 - "What's the weather in Paris?" → distance **0.89** (out-of-scope → refuse)
 
+**What a refusal actually looks like:** out-of-scope questions get a short, in-character refusal rather
+than a dry "I can't help with that" — this build has a deliberately sassy persona. What matters is
+*where* the refusal comes from: the gate returns it **before the LLM is ever invoked**, and the exact
+line is chosen deterministically (`crc32(question) % N`), so the same question always gets the same
+reply across restarts and recordings. No model decided to refuse anything.
+
 ### 3. Chit-Chat Guard (zero-cost) 💬
-A pure regex/keyword pass intercepts greetings and small talk **before** any DB query or Bedrock call. Refusing "hi" costs zero tokens and zero latency — vector search would otherwise return its nearest neighbours for "hi" and the model would try to answer from irrelevant chunks.
+A pure regex/keyword pass intercepts greetings and small talk **before** any DB query or Bedrock call. Refusing "hi" costs zero tokens and zero latency — vector search would otherwise return its nearest neighbours for "hi" and the model would try to answer from irrelevant chunks. Intercepted small talk gets the same in-character refusal as the relevance gate.
 
 ### 4. Grounded, Cited Answers 📚
 The generator (Nova Micro) is instructed to answer **only** from the provided context and cite at most **3** sources. Citations are **suppressed on refusals** — so an out-of-scope answer never leaks a bracket run like `[1][2][3]...`.
+
+---
+
+## 📸 Screenshots
+
+Captured from the live deployment before teardown. Account identifiers are redacted; **resource IDs (VPC,
+subnet, security group) are left visible on purpose — they are the evidence.** Narrated version:
+[▶️ 3-minute Loom walkthrough](https://www.loom.com/share/83d14365045f4b3aba883490e1179c87).
+
+### The chat experience
+
+| Grounded answer | Out-of-scope refusal ⭐ | Chit-chat guard |
+|---|---|---|
+| ![Grounded answer with citations](images/block-A-1-chat-grounded-answer-cropped.png) | ![Refusal to the Paris weather question](images/block-A-2-chat-refusal-cropped.png) | ![Chit-chat intercept](images/block-A-3-chat-chitchat-cropped.png) |
+| Cited from retrieved context, capped at 3 sources | Cosine distance **0.89 > 0.78** → refused **before the LLM is called** | Regex intercept — no DB or Bedrock call, zero tokens |
+
+### Data and compute
+
+| 200 vectors in Postgres | ALB — the only internet-facing entry point |
+|---|---|
+| ![SELECT count(*) FROM embeddings returns 200](images/block-B-sql-6-redacted.png) | ![ALB listeners and rules](images/block-A-4-alb-listener-redacted.png) |
+| `SELECT count(*) FROM embeddings;` → **200**, run over SSM Session Manager | Scheme **Internet-facing**, status **Active**, listener **HTTP:80** → `tg-api-8000` (100%) |
+
+### Private networking
+
+| VPC resource map | Private route table — the no-NAT proof |
+|---|---|
+| ![VPC resource map](images/block-B-vpc-7-redacted.png) | ![Private route table routes](images/9-routes-redacted.png) |
+| Four subnets across two AZs, plus the IGW and the S3 gateway endpoint | Only the S3 prefix-list route and `local` — **no `0.0.0.0/0`**, hence no NAT Gateway (~$32/mo saved) |
+
+| VPC endpoints | EC2 has no public address |
+|---|---|
+| ![VPC endpoints list](images/10-vpc-endpoints-redacted.png) | ![EC2 instance summary](images/14-ec2-redacted.png) |
+| S3 **Gateway** + Bedrock / SSM / SSMMessages / EC2Messages **Interface** | Public IPv4 `-`; private-1 subnet; attached to `ec2-sg` |
+
+### The security-group chain
+
+| `ec2-sg` inbound | `rds-sg` inbound | RDS is not reachable |
+|---|---|---|
+| ![ec2-sg inbound rules](images/11-ec2-sg-redacted.png) | ![rds-sg inbound rules](images/12-rds-sg-redacted.png) | ![RDS connectivity](images/13-rds-redacted.png) |
+| `:8000` from `sg-0efadea6140890089…` (alb-sg), `:443` from the VPC CIDR for VPC-endpoint TLS | `:5432` from `sg-037ceda8b33c926d5` (ec2-sg) **only** — no `0.0.0.0/0` | `Internet access gateway: Disabled`, `db.t4g.micro` |
+
+> **The chain:** `alb-sg (80)` → `ec2-sg (8000, source = alb-sg)` → `rds-sg (5432, source = ec2-sg)`.
+> Every hop is enforced by a security-group *reference* rather than a CIDR, so no tier is reachable from
+> the internet.
 
 ---
 
