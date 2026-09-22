@@ -30,7 +30,7 @@ EC2 instance — FastAPI (uvicorn) on port 8000
 >
 > 🎬 **Visual walkthrough:** [`FLOWCHARTS.html`](FLOWCHARTS.html) (open in a browser — the Mermaid diagrams render client-side) or [`FLOWCHARTS.pdf`](FLOWCHARTS.pdf). Covers the ingestion and query pipelines, the tuning lab, the hybrid VPC view, the sequence flash cards, and the key numbers.
 >
-> 🎥 **3-minute video walkthrough:** [Loom](https://www.loom.com/share/83d14365045f4b3aba883490e1179c87) — the problem, the live demo (grounded answer + the Paris refusal), the Top-K finding, and a short AWS console tour. Screenshots from the same deployment are [below](#-screenshots).
+> 🎥 **5-minute video walkthrough:** [Loom](https://www.loom.com/share/3e1fcb3a57744b56b03fe09f1329674f) — the problem, the live demo (grounded answer + the Paris refusal), the Top-K finding, and a short AWS console tour. Screenshots from the same deployment are [below](#-screenshots).
 
 ---
 
@@ -107,7 +107,7 @@ The generator (Nova Micro) is instructed to answer **only** from the provided co
 
 Captured from the live deployment before teardown. Account identifiers are redacted; **resource IDs (VPC,
 subnet, security group) are left visible on purpose — they are the evidence.** Narrated version:
-[▶️ 3-minute Loom walkthrough](https://www.loom.com/share/83d14365045f4b3aba883490e1179c87).
+[▶️ 5-minute Loom walkthrough](https://www.loom.com/share/3e1fcb3a57744b56b03fe09f1329674f).
 
 ### The chat experience
 
