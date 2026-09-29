@@ -1,0 +1,6 @@
+# ARCHITECTURE.html and FLOWCHARTS.html are exported documentation, not app source.
+# GitHub decides the repo's language label by counting bytes per file type, and these
+# two are bigger than all the Python combined, so the repo gets labelled HTML.
+# Marking them as documentation keeps them out of that count.
+ARCHITECTURE.html linguist-documentation
+FLOWCHARTS.html linguist-documentation
